@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  lint:
+    uses: PhilNel/shared-infra-workflows/.github/workflows/lint.yml@v1.0.0
+    with:
+      tflint_version: "v0.58.0"
+
+  scan:
+    uses: PhilNel/shared-infra-workflows/.github/workflows/security-scan.yml@v1.0.0
+    with:
+      skip_dirs: ".terraform,.terragrunt-cache,environments"

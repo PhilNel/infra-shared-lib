@@ -46,4 +46,16 @@ variable "cloudfront_price_class" {
     condition     = contains(["PriceClass_All", "PriceClass_200", "PriceClass_100"], var.cloudfront_price_class)
     error_message = "Price class must be one of: PriceClass_All, PriceClass_200, PriceClass_100."
   }
+}
+
+variable "additional_origins" {
+  description = "List of additional origins for the CloudFront distribution"
+  type = list(object({
+    domain_name              = string
+    origin_id                = string
+    host_header              = optional(string)
+    path_pattern             = optional(string)
+    origin_access_control_id = optional(string)
+  }))
+  default = []
 } 

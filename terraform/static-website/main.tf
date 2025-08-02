@@ -102,12 +102,35 @@ resource "aws_s3_bucket_versioning" "website" {
 resource "aws_cloudfront_distribution" "website" {
   count = var.enable_cloudfront ? 1 : 0
 
+  # Primary S3 origin
   origin {
     domain_name = aws_s3_bucket.website.bucket_regional_domain_name
     origin_id   = "S3-${local.bucket_name}"
 
     s3_origin_config {
       origin_access_identity = aws_cloudfront_origin_access_identity.website[0].cloudfront_access_identity_path
+    }
+  }
+
+  # Additional dynamic origins
+  dynamic "origin" {
+    for_each = var.additional_origins
+    content {
+      domain_name = origin.value.domain_name
+      origin_id   = origin.value.origin_id
+
+      origin_access_control_id = origin.value.origin_access_control_id
+
+      # Custom origin configuration (when no OAC provided)
+      dynamic "custom_origin_config" {
+        for_each = origin.value.origin_access_control_id == null ? [1] : []
+        content {
+          http_port              = 80
+          https_port             = 443
+          origin_protocol_policy = "https-only"
+          origin_ssl_protocols   = ["TLSv1.2"]
+        }
+      }
     }
   }
 
@@ -136,6 +159,31 @@ resource "aws_cloudfront_distribution" "website" {
     default_ttl            = 3600
     max_ttl                = 86400
     compress               = true
+  }
+
+  # Additional cache behaviors for origins with host headers or path patterns
+  dynamic "ordered_cache_behavior" {
+    for_each = [for origin in var.additional_origins : origin if origin.host_header != null || origin.path_pattern != null]
+    content {
+      path_pattern     = ordered_cache_behavior.value.path_pattern != null ? ordered_cache_behavior.value.path_pattern : "*"
+      allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+      cached_methods   = ["GET", "HEAD"]
+      target_origin_id = ordered_cache_behavior.value.origin_id
+
+      forwarded_values {
+        query_string = true
+        headers      = ordered_cache_behavior.value.host_header != null ? ["Host", "CloudFront-Forwarded-Proto"] : ["CloudFront-Forwarded-Proto"]
+        cookies {
+          forward = "none"
+        }
+      }
+
+      viewer_protocol_policy = "redirect-to-https"
+      min_ttl                = 0
+      default_ttl            = 3600
+      max_ttl                = 86400
+      compress               = true
+    }
   }
 
   # Custom error response for SPA routing

@@ -140,7 +140,7 @@ resource "aws_cloudfront_distribution" "website" {
   price_class         = var.cloudfront_price_class
 
   # Custom domain configuration
-  aliases = local.use_custom_domain ? [var.domain_name] : []
+  aliases = local.use_custom_domain ? [var.domain_name, "www.${var.domain_name}"] : []
 
   default_cache_behavior {
     allowed_methods  = var.cache_behavior_config.allowed_methods

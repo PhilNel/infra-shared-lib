@@ -56,6 +56,47 @@ variable "additional_origins" {
     host_header              = optional(string)
     path_pattern             = optional(string)
     origin_access_control_id = optional(string)
+    cache_behavior = optional(object({
+      allowed_methods = optional(list(string), ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"])
+      cached_methods  = optional(list(string), ["GET", "HEAD"])
+      min_ttl         = optional(number, 0)
+      default_ttl     = optional(number, 3600)
+      max_ttl         = optional(number, 86400)
+      compress        = optional(bool, true)
+    }), {})
   }))
   default = []
+}
+
+variable "cache_behavior_config" {
+  description = "Configuration for the default cache behavior"
+  type = object({
+    allowed_methods = optional(list(string), ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"])
+    cached_methods  = optional(list(string), ["GET", "HEAD"])
+    min_ttl         = optional(number, 0)
+    default_ttl     = optional(number, 3600)
+    max_ttl         = optional(number, 86400)
+    compress        = optional(bool, true)
+  })
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for method in var.cache_behavior_config.allowed_methods : contains(
+        ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"],
+        method
+      )
+    ])
+    error_message = "Allowed methods must be valid HTTP methods."
+  }
+
+  validation {
+    condition = alltrue([
+      for method in var.cache_behavior_config.cached_methods : contains(
+        ["GET", "HEAD", "OPTIONS"],
+        method
+      )
+    ])
+    error_message = "Cached methods must be GET, HEAD, or OPTIONS."
+  }
 } 

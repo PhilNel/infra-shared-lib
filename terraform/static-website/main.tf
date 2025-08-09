@@ -140,11 +140,11 @@ resource "aws_cloudfront_distribution" "website" {
   price_class         = var.cloudfront_price_class
 
   # Custom domain configuration
-  aliases = local.use_custom_domain ? [var.domain_name] : []
+  aliases = local.use_custom_domain ? [var.domain_name, "www.${var.domain_name}"] : []
 
   default_cache_behavior {
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
+    allowed_methods  = var.cache_behavior_config.allowed_methods
+    cached_methods   = var.cache_behavior_config.cached_methods
     target_origin_id = "S3-${local.bucket_name}"
 
     forwarded_values {
@@ -155,10 +155,10 @@ resource "aws_cloudfront_distribution" "website" {
     }
 
     viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-    compress               = true
+    min_ttl                = var.cache_behavior_config.min_ttl
+    default_ttl            = var.cache_behavior_config.default_ttl
+    max_ttl                = var.cache_behavior_config.max_ttl
+    compress               = var.cache_behavior_config.compress
   }
 
   # Additional cache behaviors for origins with host headers or path patterns
@@ -166,8 +166,8 @@ resource "aws_cloudfront_distribution" "website" {
     for_each = [for origin in var.additional_origins : origin if origin.host_header != null || origin.path_pattern != null]
     content {
       path_pattern     = ordered_cache_behavior.value.path_pattern != null ? ordered_cache_behavior.value.path_pattern : "*"
-      allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-      cached_methods   = ["GET", "HEAD"]
+      allowed_methods  = ordered_cache_behavior.value.cache_behavior.allowed_methods
+      cached_methods   = ordered_cache_behavior.value.cache_behavior.cached_methods
       target_origin_id = ordered_cache_behavior.value.origin_id
 
       forwarded_values {
@@ -179,10 +179,10 @@ resource "aws_cloudfront_distribution" "website" {
       }
 
       viewer_protocol_policy = "redirect-to-https"
-      min_ttl                = 0
-      default_ttl            = 3600
-      max_ttl                = 86400
-      compress               = true
+      min_ttl                = ordered_cache_behavior.value.cache_behavior.min_ttl
+      default_ttl            = ordered_cache_behavior.value.cache_behavior.default_ttl
+      max_ttl                = ordered_cache_behavior.value.cache_behavior.max_ttl
+      compress               = ordered_cache_behavior.value.cache_behavior.compress
     }
   }
 

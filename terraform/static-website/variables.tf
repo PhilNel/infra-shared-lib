@@ -79,7 +79,7 @@ variable "cache_behavior_config" {
     compress        = optional(bool, true)
   })
   default = {}
-  
+
   validation {
     condition = alltrue([
       for method in var.cache_behavior_config.allowed_methods : contains(
@@ -89,7 +89,7 @@ variable "cache_behavior_config" {
     ])
     error_message = "Allowed methods must be valid HTTP methods."
   }
-  
+
   validation {
     condition = alltrue([
       for method in var.cache_behavior_config.cached_methods : contains(
